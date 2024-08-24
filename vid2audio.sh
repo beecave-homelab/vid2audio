@@ -3,11 +3,11 @@ set -euo pipefail
 
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
-# Author: [Your Name]
-# Version: 1.5.0
+# Author: elvee
+# Version: 0.5.0
 # License: MIT
-# Creation Date: [dd/mm/yyyy]
-# Last Modified: [dd/mm/yyyy]
+# Creation Date: 17-08-2024
+# Last Modified: 24-08-2024
 # Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r]
 
 # Default values
