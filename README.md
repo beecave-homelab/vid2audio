@@ -12,14 +12,14 @@
 
 ## Usage
 
-### Basic Usage
+### Process a file, re-encode the stream and save it to .mp3
 ```bash
-./vid2audio.sh -f <input_file> [-o <output_file>] [-c]
+./vid2audio.sh -f </path/to/save/input_file> [-o </path/to/save/output_file.mp3>]
 ```
 
-### Process All Files in a Directory
+### Process all files in a directory (recursively, don't re-encode stream)
 ```bash
-./vid2audio.sh -d <directory> [-o <output_directory>] [-c] [-r]
+./vid2audio.sh -d </path/to/directory> [-o </path/to/save/directory>] [-c] [-r]
 ```
 
 ### Options
