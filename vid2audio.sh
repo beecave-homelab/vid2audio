@@ -3,11 +3,11 @@ set -euo pipefail
 
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
-# Author: elvee
-# Version: 0.3.0
+# Author: [Your Name]
+# Version: 1.5.0
 # License: MIT
-# Creation Date: 17-08-2024
-# Last Modified: 24-08-2024
+# Creation Date: [dd/mm/yyyy]
+# Last Modified: [dd/mm/yyyy]
 # Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r]
 
 # Default values
@@ -48,7 +48,7 @@ Options:
 
 # Function for error handling
 error_exit() {
-  echo "Error: $1" >&2
+  echo "[+] Error: $1" >&2
   exit 1
 }
 
@@ -65,7 +65,7 @@ get_extension() {
     flac) echo "flac" ;;
     wav) echo "wav" ;;
     alac) echo "m4a" ;;
-    *) error_exit "Unsupported audio codec: $codec" ;;
+    *) error_exit "[+] Unsupported audio codec: $codec" ;;
   esac
 }
 
@@ -74,17 +74,28 @@ convert_to_audio() {
   local input_file="$1"
   local output_file="$2"
 
+  # Check if output file already exists
+  if [ -f "$output_file" ]; then
+    echo "[+] Warning: '$output_file' already exists."
+    echo "[+] Do you want to overwrite it? (y/n)"
+    read -r overwrite
+    if [[ "$overwrite" != "y" ]]; then
+      echo "[+] Skipping conversion for '$input_file'."
+      return
+    fi
+  fi
+
   if [ "$COPY_MODE" = true ]; then
     local extension
     extension=$(get_extension "$input_file")
     output_file="${output_file%.*}.$extension"
-    echo "Extracting audio from '$input_file' to '$output_file'..."
+    echo "[+] Extracting audio from '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -vn -acodec copy "$output_file"
   else
-    echo "Converting '$input_file' to '$output_file'..."
+    echo "[+] Converting '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -map 0:a "$output_file"
   fi
-  echo "Operation completed."
+  echo "[+] Operation completed."
 }
 
 # Function to process all video files in a directory
@@ -101,16 +112,16 @@ process_directory() {
   fi
 
   if [[ -z "$files" ]]; then
-    error_exit "No supported video files found in directory '$dir'."
+    error_exit "[+] No supported video files found in directory '$dir'."
   fi
 
-  echo "The following files were found in the directory '$dir':"
+  echo "[+] The following files were found in the directory '$dir':"
   echo "$files"
-  echo "Do you want to process all these files? (y/n)"
+  echo "[+] Do you want to process all these files? (y/n)"
   read -r confirmation
 
   if [[ "$confirmation" != "y" ]]; then
-    error_exit "Operation cancelled by user."
+    error_exit "[+] Operation cancelled by user."
   fi
 
   # Process each file, handling spaces in file names correctly
@@ -180,7 +191,7 @@ main() {
   else
     show_ascii
     show_help
-    error_exit "No input file or directory provided"
+    error_exit "[+] No input file or directory provided"
   fi
 }
 
