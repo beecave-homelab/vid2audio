@@ -69,6 +69,12 @@ get_extension() {
   esac
 }
 
+# Function to sanitize filename
+sanitize_filename() {
+  local filename="$1"
+  echo "$filename" | sed -e 's/[^A-Za-z0-9._-]/_/g'
+}
+
 # Function to convert a single video file to MP3 or extract the audio stream
 convert_to_audio() {
   local input_file="$1"
@@ -92,6 +98,7 @@ convert_to_audio() {
     echo "[+] Extracting audio from '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -vn -acodec copy "$output_file"
   else
+    output_file="${output_file%.*}.mp3"
     echo "[+] Converting '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -map 0:a "$output_file"
   fi
@@ -106,9 +113,9 @@ process_directory() {
   # Find all supported video files in the specified directory (recursively if enabled)
   local files
   if [ "$RECURSIVE_MODE" = true ]; then
-    files=$(find "$dir" -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \))
+    files=$(find "$dir" -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \) -not -path '*/.*')
   else
-    files=$(find "$dir" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \))
+    files=$(find "$dir" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \) -not -path '*/.*')
   fi
 
   if [[ -z "$files" ]]; then
@@ -124,13 +131,20 @@ process_directory() {
     error_exit "[+] Operation cancelled by user."
   fi
 
-  # Process each file, handling spaces in file names correctly
-  IFS=$'\n'
-  for file in $files; do
-    local output_file="${output_dir}/$(basename "${file%.*}.mp3")"
+  # Process each file, handling spaces and special characters in file names correctly
+  while IFS= read -r file; do
+    local base_name
+    base_name=$(basename "$file")
+    local output_file
+    if [ "$COPY_MODE" = true ]; then
+      local extension
+      extension=$(get_extension "$file")
+      output_file="${output_dir}/${base_name%.*}.$extension"
+    else
+      output_file="${output_dir}/${base_name%.*}.mp3"
+    fi
     convert_to_audio "$file" "$output_file"
-  done
-  unset IFS
+  done <<< "$files"
 }
 
 # Main function to encapsulate script logic
@@ -184,7 +198,17 @@ main() {
     process_directory "$directory" "$output_dir"
   elif [[ -n "$input_file" ]]; then
     if [[ -z "$output_file" || "$output_file" == "$PWD/vid2audio-output.mp3" ]]; then
-      output_file="${PWD}/$(basename "${input_file%.*}.mp3")"
+      local base_name
+      base_name=$(basename "$input_file")
+      if [ "$COPY_MODE" = true ]; then
+        local extension
+        extension=$(get_extension "$input_file")
+        output_file="${PWD}/${base_name%.*}.$extension"
+      else
+        output_file="${PWD}/${base_name%.*}.mp3"
+      fi
+    elif [ "$COPY_MODE" = false ]; then
+      output_file="${output_file%.*}.mp3"
     fi
     show_ascii
     convert_to_audio "$input_file" "$output_file"
