@@ -4,16 +4,17 @@ set -euo pipefail
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
 # Author: elvee
-# Version: 0.5.0
+# Version: 0.6.0
 # License: MIT
 # Creation Date: 17-08-2024
-# Last Modified: 24-08-2024
-# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r]
+# Last Modified: 14-09-2024
+# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s]
 
 # Default values
 OUTPUT_FILE="${PWD}/vid2audio-output.mp3"
 COPY_MODE=false
 RECURSIVE_MODE=false
+SKIP_EXISTING=false
 
 # Function to display ASCII art
 show_ascii() {
@@ -42,8 +43,9 @@ Options:
   -d, --directory <directory>   Convert all supported video files in the specified directory.
   -r, --recursive               Recursively search for video files in the directory.
   -c, --copy                    Extract audio stream without re-encoding and save with appropriate extension.
+  -s, --skip-existing           Skip confirmation and do not overwrite existing files.
   -h, --help                    Display this help message.
-"
+  "
 }
 
 # Function for error handling
@@ -69,19 +71,16 @@ get_extension() {
   esac
 }
 
-# Function to sanitize filename
-sanitize_filename() {
-  local filename="$1"
-  echo "$filename" | sed -e 's/[^A-Za-z0-9._-]/_/g'
-}
-
 # Function to convert a single video file to MP3 or extract the audio stream
 convert_to_audio() {
   local input_file="$1"
   local output_file="$2"
 
-  # Check if output file already exists
   if [ -f "$output_file" ]; then
+    if [ "$SKIP_EXISTING" = true ]; then
+      echo "[+] Skipping existing file '$output_file'."
+      return
+    fi
     echo "[+] Warning: '$output_file' already exists."
     echo "[+] Do you want to overwrite it? (y/n)"
     read -r overwrite
@@ -98,7 +97,6 @@ convert_to_audio() {
     echo "[+] Extracting audio from '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -vn -acodec copy "$output_file"
   else
-    output_file="${output_file%.*}.mp3"
     echo "[+] Converting '$input_file' to '$output_file'..."
     ffmpeg -i "$input_file" -map 0:a "$output_file"
   fi
@@ -110,12 +108,12 @@ process_directory() {
   local dir="$1"
   local output_dir="${2:-${PWD}}"
 
-  # Find all supported video files in the specified directory (recursively if enabled)
+  # Find all supported video files in the specified directory (recursively if enabled), excluding hidden files
   local files
   if [ "$RECURSIVE_MODE" = true ]; then
-    files=$(find "$dir" -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \) -not -path '*/.*')
+    files=$(find "$dir" -type f ! -name ".*" ! -name "._*" \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \))
   else
-    files=$(find "$dir" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \) -not -path '*/.*')
+    files=$(find "$dir" -maxdepth 1 -type f ! -name ".*" ! -name "._*" \( -iname "*.mp4" -o -iname "*.mov" -o -iname "*.mkv" -o -iname "*.avi" -o -iname "*.wmv" -o -iname "*.flv" -o -iname "*.mpeg" -o -iname "*.mpg" -o -iname "*.webm" \))
   fi
 
   if [[ -z "$files" ]]; then
@@ -131,20 +129,13 @@ process_directory() {
     error_exit "[+] Operation cancelled by user."
   fi
 
-  # Process each file, handling spaces and special characters in file names correctly
-  while IFS= read -r file; do
-    local base_name
-    base_name=$(basename "$file")
-    local output_file
-    if [ "$COPY_MODE" = true ]; then
-      local extension
-      extension=$(get_extension "$file")
-      output_file="${output_dir}/${base_name%.*}.$extension"
-    else
-      output_file="${output_dir}/${base_name%.*}.mp3"
-    fi
+  # Process each file, handling spaces in file names correctly
+  IFS=$'\n'
+  for file in $files; do
+    local output_file="${output_dir}/$(basename "${file%.*}.mp3")"
     convert_to_audio "$file" "$output_file"
-  done <<< "$files"
+  done
+  unset IFS
 }
 
 # Main function to encapsulate script logic
@@ -177,6 +168,10 @@ main() {
         COPY_MODE=true
         shift
         ;;
+      -s|--skip-existing)
+        SKIP_EXISTING=true
+        shift
+        ;;
       -h|--help)
         show_ascii
         show_help
@@ -198,17 +193,7 @@ main() {
     process_directory "$directory" "$output_dir"
   elif [[ -n "$input_file" ]]; then
     if [[ -z "$output_file" || "$output_file" == "$PWD/vid2audio-output.mp3" ]]; then
-      local base_name
-      base_name=$(basename "$input_file")
-      if [ "$COPY_MODE" = true ]; then
-        local extension
-        extension=$(get_extension "$input_file")
-        output_file="${PWD}/${base_name%.*}.$extension"
-      else
-        output_file="${PWD}/${base_name%.*}.mp3"
-      fi
-    elif [ "$COPY_MODE" = false ]; then
-      output_file="${output_file%.*}.mp3"
+      output_file="${PWD}/$(basename "${input_file%.*}.mp3")"
     fi
     show_ascii
     convert_to_audio "$input_file" "$output_file"
