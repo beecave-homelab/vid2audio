@@ -29,6 +29,7 @@
 - `-d, --directory <directory>`: Process all supported video files in the specified directory.
 - `-r, --recursive`: Recursively search for video files in the directory and its subdirectories.
 - `-c, --copy`: Extract the audio stream without re-encoding and save it with the appropriate file extension.
+- `-s, --skip-existing`: Skip confirmation and do not overwrite existing files.
 - `-h, --help`: Display the help message.
 
 ### Examples
@@ -51,6 +52,11 @@
 **Recursively process all supported video files in a directory and its subdirectories:**
 ```bash
 ./vid2audio.sh -d /path/to/videos -r -c
+```
+
+**Skip confirmation and do not overwrite existing converted files:**
+```bash
+./vid2audio.sh -d /path/to/videos -s
 ```
 
 ## Supported Video Formats
