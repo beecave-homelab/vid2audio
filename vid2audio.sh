@@ -4,13 +4,14 @@ set -euo pipefail
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
 # Author: elvee
-# Version: 0.7.1
+# Version: 0.8.1
 # License: MIT
 # Creation Date: 17-08-2024
 # Last Modified: 30-03-2026
-# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s]
+# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s] [-V]
 
 # Default values
+SCRIPT_VERSION="0.8.0"
 OUTPUT_FILE=""
 COPY_MODE=false
 RECURSIVE_MODE=false
@@ -44,8 +45,14 @@ Options:
   -r, --recursive               Recursively search for video files in the directory.
   -c, --copy                    Extract audio stream without re-encoding and save with appropriate extension.
   -s, --skip-existing           Skip confirmation and do not overwrite existing files.
+  -V, --version                 Display script version.
   -h, --help                    Display this help message.
   "
+}
+
+# Function to display script version
+show_version() {
+  echo "vid2audio ${SCRIPT_VERSION}"
 }
 
 # Function for error handling
@@ -172,6 +179,8 @@ main() {
         if [[ $# -gt 1 && "${2:-}" != -* ]]; then
           input_file="$2"
           shift 2
+        elif [[ $# -gt 1 && "${2:-}" == -* && -t 0 ]]; then
+          error_exit "No input file provided for -f/--file (got option '${2}'). Pass an argument or pipe via stdin."
         else
           file_from_stdin=true
           shift
@@ -190,6 +199,8 @@ main() {
         if [[ $# -gt 1 && "${2:-}" != -* ]]; then
           directory="$2"
           shift 2
+        elif [[ $# -gt 1 && "${2:-}" == -* && -t 0 ]]; then
+          error_exit "No directory provided for -d/--directory (got option '${2}'). Pass an argument or pipe via stdin."
         else
           directory_from_stdin=true
           shift
@@ -210,6 +221,10 @@ main() {
       -h|--help)
         show_ascii
         show_help
+        exit 0
+        ;;
+      -V|--version)
+        show_version
         exit 0
         ;;
       *)
