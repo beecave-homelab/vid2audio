@@ -4,7 +4,7 @@ set -euo pipefail
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
 # Author: elvee
-# Version: 0.7.0
+# Version: 0.7.1
 # License: MIT
 # Creation Date: 17-08-2024
 # Last Modified: 30-03-2026
