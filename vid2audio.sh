@@ -4,18 +4,19 @@ set -euo pipefail
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
 # Author: elvee
-# Version: 0.8.1
+# Version: 0.9.0
 # License: MIT
 # Creation Date: 17-08-2024
 # Last Modified: 30-03-2026
-# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s] [-V]
+# Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s] [-v] [-V]
 
 # Default values
-SCRIPT_VERSION="0.8.0"
+SCRIPT_VERSION="0.9.0"
 OUTPUT_FILE=""
 COPY_MODE=false
 RECURSIVE_MODE=false
 SKIP_EXISTING=false
+VERBOSE=false
 
 # Function to display ASCII art
 show_ascii() {
@@ -32,7 +33,7 @@ show_ascii() {
 # Function to display help information
 show_help() {
   echo "
-Usage: $0 -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r]
+Usage: $0 -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-v] [-V]
 
 Converts a video file or all .mp4, .mov, .mkv, .avi, .wmv, .flv, .mpeg, .mpg, and .webm files in a directory to MP3
 or extracts the audio stream without re-encoding if the -c or --copy option is used. If no options are provided, the
@@ -45,6 +46,7 @@ Options:
   -r, --recursive               Recursively search for video files in the directory.
   -c, --copy                    Extract audio stream without re-encoding and save with appropriate extension.
   -s, --skip-existing           Skip confirmation and do not overwrite existing files.
+  -v, --verbose                 Enable verbose output.
   -V, --version                 Display script version.
   -h, --help                    Display this help message.
   "
@@ -216,6 +218,10 @@ main() {
         ;;
       -s|--skip-existing)
         SKIP_EXISTING=true
+        shift
+        ;;
+      -v|--verbose)
+        VERBOSE=true
         shift
         ;;
       -h|--help)
