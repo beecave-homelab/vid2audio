@@ -11,7 +11,7 @@ set -euo pipefail
 # Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s]
 
 # Default values
-OUTPUT_FILE="${PWD}/vid2audio-output.mp3"
+OUTPUT_FILE=""
 COPY_MODE=false
 RECURSIVE_MODE=false
 SKIP_EXISTING=false
@@ -39,7 +39,7 @@ script will convert a single video to MP3.
 
 Options:
   -f, --file [input_file]       Input video file (required if not using -d). If omitted, reads from stdin.
-  -o, --output <output_file>    Output MP3 or audio file (default: ${PWD}/vid2audio-output.mp3).
+  -o, --output <output_file>    Output MP3 or audio file (default: <input_file_name>.mp3 in current directory).
   -d, --directory [directory]   Convert all supported video files in the specified directory. If omitted, reads from stdin.
   -r, --recursive               Recursively search for video files in the directory.
   -c, --copy                    Extract audio stream without re-encoding and save with appropriate extension.
@@ -178,9 +178,13 @@ main() {
         fi
         ;;
       -o|--output)
-        output_file="$2"
-        output_dir="$2"
-        shift 2
+        if [[ $# -gt 1 && "${2:-}" != -* ]]; then
+          output_file="$2"
+          output_dir="$2"
+          shift 2
+        else
+          error_exit "No output path provided for -o/--output."
+        fi
         ;;
       -d|--directory)
         if [[ $# -gt 1 && "${2:-}" != -* ]]; then
@@ -240,7 +244,7 @@ main() {
     show_ascii
     process_directory "$directory" "$output_dir"
   elif [[ -n "$input_file" ]]; then
-    if [[ -z "$output_file" || "$output_file" == "$PWD/vid2audio-output.mp3" ]]; then
+    if [[ -z "$output_file" ]]; then
       output_file="${PWD}/$(basename "${input_file%.*}.mp3")"
     fi
     show_ascii
