@@ -4,10 +4,10 @@ set -euo pipefail
 # Script Description: Converts video files to MP3 or extracts the audio stream without re-encoding.
 # Can process a single file or various video formats in a directory recursively if -r is specified.
 # Author: elvee
-# Version: 0.6.0
+# Version: 0.7.0
 # License: MIT
 # Creation Date: 17-08-2024
-# Last Modified: 14-09-2024
+# Last Modified: 30-03-2026
 # Usage: vid2audio.sh -f <input_file> [-o <output_file>] [-c] | -d <directory> [-o <output_directory>] [-c] [-r] [-s]
 
 # Default values
@@ -38,9 +38,9 @@ or extracts the audio stream without re-encoding if the -c or --copy option is u
 script will convert a single video to MP3.
 
 Options:
-  -f, --file <input_file>       Input video file (required if not using -d).
+  -f, --file [input_file]       Input video file (required if not using -d). If omitted, reads from stdin.
   -o, --output <output_file>    Output MP3 or audio file (default: ${PWD}/vid2audio-output.mp3).
-  -d, --directory <directory>   Convert all supported video files in the specified directory.
+  -d, --directory [directory]   Convert all supported video files in the specified directory. If omitted, reads from stdin.
   -r, --recursive               Recursively search for video files in the directory.
   -c, --copy                    Extract audio stream without re-encoding and save with appropriate extension.
   -s, --skip-existing           Skip confirmation and do not overwrite existing files.
@@ -52,6 +52,24 @@ Options:
 error_exit() {
   echo "[+] Error: $1" >&2
   exit 1
+}
+
+# Function to read the first non-empty line from stdin
+read_stdin_input() {
+  local line
+
+  if [ -t 0 ]; then
+    return 1
+  fi
+
+  while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+      printf '%s' "$line"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 # Function to determine the correct file extension based on the audio codec
@@ -144,12 +162,20 @@ main() {
   local output_file="$OUTPUT_FILE"
   local directory=""
   local output_dir=""
+  local file_from_stdin=false
+  local directory_from_stdin=false
+  local stdin_input=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
       -f|--file)
-        input_file="$2"
-        shift 2
+        if [[ $# -gt 1 && "${2:-}" != -* ]]; then
+          input_file="$2"
+          shift 2
+        else
+          file_from_stdin=true
+          shift
+        fi
         ;;
       -o|--output)
         output_file="$2"
@@ -157,8 +183,13 @@ main() {
         shift 2
         ;;
       -d|--directory)
-        directory="$2"
-        shift 2
+        if [[ $# -gt 1 && "${2:-}" != -* ]]; then
+          directory="$2"
+          shift 2
+        else
+          directory_from_stdin=true
+          shift
+        fi
         ;;
       -r|--recursive)
         RECURSIVE_MODE=true
@@ -184,6 +215,23 @@ main() {
         ;;
     esac
   done
+
+  if [[ "$file_from_stdin" = true || "$directory_from_stdin" = true ]]; then
+    if ! stdin_input=$(read_stdin_input); then
+      if [[ "$file_from_stdin" = true ]]; then
+        error_exit "No input file provided for -f/--file (pass an argument or pipe via stdin)."
+      fi
+      error_exit "No directory provided for -d/--directory (pass an argument or pipe via stdin)."
+    fi
+
+    if [[ "$file_from_stdin" = true ]]; then
+      input_file="$stdin_input"
+    fi
+
+    if [[ "$directory_from_stdin" = true ]]; then
+      directory="$stdin_input"
+    fi
+  fi
 
   if [[ -n "$directory" ]]; then
     if [[ -z "$output_dir" ]]; then
